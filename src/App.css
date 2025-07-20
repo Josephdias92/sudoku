@@ -57,6 +57,37 @@
   padding: 0;
 }
 
+.sudoku-container > h1 {
+  margin-bottom: 0.5rem;
+}
+
+.sudoku-container > div[style*="marginBottom"] {
+  margin-bottom: 1.2rem !important;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 1.1rem;
+}
+
+#level-select {
+  padding: 0.4rem 1.2rem 0.4rem 0.7rem;
+  font-size: 1.1rem;
+  border-radius: 6px;
+  border: 1.5px solid #646cff;
+  background: #fff;
+  color: #213547;
+  outline: none;
+  transition: border 0.2s;
+  font-weight: 500;
+}
+#level-select:focus {
+  border: 2px solid #646cff;
+}
+label[for="level-select"] {
+  font-weight: 500;
+  color: #646cff;
+}
+
 .sudoku-board {
   display: grid;
   grid-template-rows: repeat(9, 1fr);
@@ -141,7 +172,7 @@
   min-height: 1.5em;
 }
 
-.sudoku-row.error-row {
+.sudoku-cell.error-row {
   background: #ffebee;
 }
 .sudoku-cell.error-col {
