@@ -1,0 +1,223 @@
+#root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 0 1rem;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  max-width: 1280px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.sudoku-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 1rem;
+  padding: 0;
+}
+
+.sudoku-board {
+  display: grid;
+  grid-template-rows: repeat(9, 1fr);
+  border: 3px solid #333;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  max-width: 100vw;
+  width: fit-content;
+  min-width: 0;
+  margin: 0 auto;
+  /* Remove extra spacing around the board */
+  padding: 0;
+}
+
+.sudoku-row {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  /* Remove extra spacing between rows */
+  margin: 0;
+}
+
+.sudoku-cell {
+  width: 3.5rem;
+  height: 3.5rem;
+  min-width: 2.2rem;
+  min-height: 2.2rem;
+  text-align: center;
+  font-size: 2rem;
+  border: 1px solid #bbb;
+  outline: none;
+  background: #f9f9f9;
+  transition: background 0.2s;
+}
+.sudoku-cell:disabled {
+  background: #e0e0e0;
+  color: #333;
+  font-weight: bold;
+}
+.sudoku-cell.error {
+  background: #ffdddd;
+  border-color: #e53935;
+  color: #b71c1c;
+  /* Make error highlight more visible */
+  box-shadow: 0 0 0.5rem #e5393555;
+  z-index: 1;
+}
+.sudoku-cell.flash {
+  background: #d4ffd4 !important;
+  border-color: #43a047 !important;
+  animation: flash-green 2s;
+}
+@keyframes flash-green {
+  0% { background: #d4ffd4; }
+  100% { background: #f9f9f9; }
+}
+
+.sudoku-row:nth-child(3), .sudoku-row:nth-child(6) {
+  border-bottom: 2px solid #333;
+}
+.sudoku-cell:nth-child(3), .sudoku-cell:nth-child(6) {
+  border-right: 2px solid #333;
+}
+
+.check-btn {
+  margin-top: 1.5rem;
+  padding: 0.5rem 1.5rem;
+  font-size: 1.1rem;
+  background: #646cff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.check-btn:hover {
+  background: #4b52c3;
+}
+
+.message {
+  margin-top: 1rem;
+  font-size: 1.1rem;
+  min-height: 1.5em;
+}
+
+.sudoku-row.error-row {
+  background: #ffebee;
+}
+.sudoku-cell.error-col {
+  background: #ffebee;
+}
+.sudoku-cell.error-block {
+  background: #ffebee;
+}
+
+.sudoku-cell.selected {
+  outline: 2px solid #646cff;
+  z-index: 2;
+}
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.7rem;
+  margin: 1.2rem auto 0.5rem auto;
+  justify-items: center;
+}
+.numpad-btn {
+  width: 3.2rem;
+  height: 3.2rem;
+  font-size: 1.6rem;
+  background: #fff;
+  border: 2px solid #646cff;
+  cursor: pointer;
+  transition: background 0.2s, border 0.2s, color 0.2s, box-shadow 0.2s;
+  margin: 0.1rem 0.2rem;
+  box-shadow: 0 2px 8px rgba(100,108,255,0.10);
+  outline: none;
+  font-weight: 600;
+  color: #646cff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.numpad-btn:hover, .numpad-btn:focus {
+  background: #646cff;
+  color: #fff;
+  border: 2px solid #646cff;
+  box-shadow: 0 2px 12px #646cff33;
+}
+.numpad-btn:active {
+  background: #4b52c3;
+  color: #fff;
+  border: 2px solid #4b52c3;
+}
+@media (max-width: 600px) {
+  .sudoku-board {
+    max-width: 98vw;
+    box-shadow: none;
+    margin: 0 auto;
+  }
+  .sudoku-cell {
+    width: 2.2rem;
+    height: 2.2rem;
+    font-size: 1.1rem;
+    padding: 0;
+  }
+  .sudoku-container {
+    margin-top: 0.2rem;
+    padding: 0;
+  }
+  h1 {
+    font-size: 1.3rem;
+  }
+  .numpad {
+    max-width: 98vw;
+    gap: 0.3rem;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .numpad-btn {
+    width: 2.1rem;
+    height: 2.1rem;
+    font-size: 1rem;
+    border-radius: 50%;
+  }
+}
