@@ -107,7 +107,6 @@ function App() {
     time, setTime,
     history, setHistory
   } = usePersistentSudokuState();
-  const [message, setMessage] = useState('');
   const [selectedCell, setSelectedCell] = useState(null);
   const [timerRunning, setTimerRunning] = useState(true);
   const timerRef = useRef(null);
@@ -170,6 +169,7 @@ function App() {
 
   // Update handleChange to only be used by button input
   const handleInput = (num) => {
+    if (mistakes >= 3) return;
     if (!selectedCell) return;
     // If timer is paused, resume it on any input
     if (!timerRunning) setTimerRunning(true);
@@ -190,7 +190,6 @@ function App() {
         },
         flashCells: new Set(flashCells),
         selectedCell,
-        message
       }]);
     }
     newBoard[rowIdx][colIdx] = num;
@@ -205,13 +204,21 @@ function App() {
         errors.colErrors.has(`${rowIdx},${colIdx}`) ||
         errors.blockErrors.has(`${rowIdx},${colIdx}`))
     ) {
-      setMessage('There is a mistake!');
       // Only increment if this is a new mistake (not just re-entering the same wrong value)
       if (prevValue !== num) setMistakes(m => m + 1);
     } else {
-      setMessage('');
-      // Score logic: if user enters a correct value (no error and not zero), increment score
-      if (num !== 0 && prevValue !== num) setScore(s => s + 1);
+      // Score logic: increment based on level
+      if (num !== 0 && prevValue !== num) {
+        const levelScore = {
+          easy: 1,
+          medium: 2,
+          hard: 3,
+          expert: 4,
+          master: 5,
+          extreme: 6
+        };
+        setScore(s => s + (levelScore[level] || 1));
+      }
     }
     // Flash correct cells if any row, col, or block is correct
     const correct = getCorrectCells(newBoard);
@@ -224,11 +231,12 @@ function App() {
 
   // Undo handler
   const handleUndo = () => {
+    if (mistakes >= 3) return;
     setHistory(h => {
       if (h.length === 0) return h;
       const last = h[h.length - 1];
       setBoard(last.board.map(r => [...r]));
-      setMistakes(last.mistakes);
+      // Do NOT restore mistakes from history
       setScore(last.score);
       setErrorCells({
         rowErrors: new Set(last.errorCells.rowErrors),
@@ -237,7 +245,6 @@ function App() {
       });
       setFlashCells(new Set(last.flashCells));
       setSelectedCell(last.selectedCell);
-      setMessage(last.message);
       return h.slice(0, -1);
     });
   };
@@ -259,7 +266,6 @@ function App() {
                 const newInitial = generateSudokuBoard(lvl);
                 setInitialBoard(newInitial);
                 setBoard(newInitial.map(row => [...row]));
-                setMessage("");
                 setFlashCells(new Set());
                 setErrorCells({ rowErrors: new Set(), colErrors: new Set(), blockErrors: new Set() });
                 setSelectedCell(null);
@@ -327,30 +333,30 @@ function App() {
                 key={num}
                 className="numpad-btn"
                 onClick={() => handleInput(num)}
+                disabled={mistakes >= 3}
               >
                 {num}
               </button>
             ))}
           </div>
           <div className="action-btn-row">
-            <button className="clear-btn" onClick={() => handleInput(0)}>Clear</button>
-            <button className="undo-btn" onClick={handleUndo} disabled={history.length === 0}>Undo</button>
+            <button className="clear-btn" onClick={() => handleInput(0)} disabled={mistakes >= 3}>Clear</button>
+            <button className="undo-btn" onClick={handleUndo} disabled={history.length === 0 || mistakes >= 3}>Undo</button>
             <button className="newgame-btn" onClick={() => {
               const newInitial = generateSudokuBoard(level);
               setInitialBoard(newInitial);
               setBoard(newInitial.map(row => [...row]));
-              setMessage('');
               setFlashCells(new Set());
               setErrorCells({ rowErrors: new Set(), colErrors: new Set(), blockErrors: new Set() });
               setSelectedCell(null);
               setHistory([]);
+              setMistakes(0);
               setTime(0);
               setTimerRunning(true);
             }}>New Game</button>
           </div>
         </div>
       </div>
-      <div className="message">{message}</div>
     </div>
   );
 }
