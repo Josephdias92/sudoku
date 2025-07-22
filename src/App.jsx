@@ -1,212 +1,217 @@
-import { useState, useRef } from 'react'
-import './App.css'
 
-// Generate a random valid Sudoku board (with some cells removed for play)
-function generateSudokuBoard(level = 'easy') {
-  // Helper to check if placing num at (row, col) is valid
-  function isSafe(board, row, col, num) {
-    for (let x = 0; x < 9; x++) {
-      if (board[row][x] === num || board[x][col] === num) return false;
-    }
-    const startRow = row - row % 3, startCol = col - col % 3;
-    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
-      if (board[i + startRow][j + startCol] === num) return false;
-    }
-    return true;
-  }
 
-  // Backtracking Sudoku solver/filler
-  function fillBoard(board) {
-    for (let row = 0; row < 9; row++) {
-      for (let col = 0; col < 9; col++) {
-        if (board[row][col] === 0) {
-          let nums = [1,2,3,4,5,6,7,8,9].sort(() => Math.random() - 0.5);
-          for (let num of nums) {
-            if (isSafe(board, row, col, num)) {
-              board[row][col] = num;
-              if (fillBoard(board)) return true;
-              board[row][col] = 0;
-            }
-          }
-          return false;
-        }
-      }
-    }
-    return true;
-  }
 
-  // Remove cells to create a puzzle
-  function removeCells(board, level) {
-    let emptyCount;
-    if (level === 'easy') emptyCount = 35;
-    else if (level === 'medium') emptyCount = 45;
-    else if (level === 'hard') emptyCount = 55;
-    else emptyCount = 45;
-    let attempts = emptyCount;
-    while (attempts > 0) {
-      let row = Math.floor(Math.random() * 9);
-      let col = Math.floor(Math.random() * 9);
-      if (board[row][col] !== 0) {
-        board[row][col] = 0;
-        attempts--;
-      }
-    }
-    return board;
-  }
 
-  let board = Array.from({ length: 9 }, () => Array(9).fill(0));
-  fillBoard(board);
-  return removeCells(board, level);
+import React, { useState, useRef, useEffect } from 'react';
+import './App.css';
+import { generateSudokuBoard, getCorrectCells, getErrorRegions } from './sudokuUtils';
+
+// Custom hook for persistent state
+function usePersistentSudokuState() {
+  const loadState = () => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('sudoku-state'));
+      if (!saved) return null;
+      return {
+        ...saved,
+        initialBoard: saved.initialBoard?.map(row => [...row]) ?? undefined,
+        board: saved.board?.map(row => [...row]) ?? undefined,
+        flashCells: new Set(saved.flashCells ?? []),
+        errorCells: {
+          rowErrors: new Set(saved.errorCells?.rowErrors ?? []),
+          colErrors: new Set(saved.errorCells?.colErrors ?? []),
+          blockErrors: new Set(saved.errorCells?.blockErrors ?? [])
+        },
+        history: (saved.history ?? []).map(h => ({
+          ...h,
+          board: h.board?.map(row => [...row]),
+          errorCells: {
+            rowErrors: new Set(h.errorCells?.rowErrors ?? []),
+            colErrors: new Set(h.errorCells?.colErrors ?? []),
+            blockErrors: new Set(h.errorCells?.blockErrors ?? [])
+          },
+          flashCells: new Set(h.flashCells ?? [])
+        }))
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const saved = loadState();
+  const [level, setLevel] = useState(saved?.level ?? 'easy');
+  const [initialBoard, setInitialBoard] = useState(() => saved?.initialBoard ?? generateSudokuBoard(saved?.level ?? 'easy'));
+  const [board, setBoard] = useState(saved?.board ?? initialBoard.map(row => [...row]));
+  const [flashCells, setFlashCells] = useState(saved?.flashCells ?? new Set());
+  const [errorCells, setErrorCells] = useState(saved?.errorCells ?? { rowErrors: new Set(), colErrors: new Set(), blockErrors: new Set() });
+  const [mistakes, setMistakes] = useState(saved?.mistakes ?? 0);
+  const [score, setScore] = useState(saved?.score ?? 0);
+  const [time, setTime] = useState(saved?.time ?? 0); // seconds
+  const [history, setHistory] = useState(saved?.history ?? []);
+
+  // Save state to localStorage on relevant changes
+  useEffect(() => {
+    const stateToSave = {
+      level,
+      initialBoard,
+      board,
+      mistakes,
+      score,
+      time,
+      flashCells: Array.from(flashCells),
+      errorCells: {
+        rowErrors: Array.from(errorCells.rowErrors),
+        colErrors: Array.from(errorCells.colErrors),
+        blockErrors: Array.from(errorCells.blockErrors)
+      },
+      history: history.map(h => ({
+        ...h,
+        board: h.board,
+        errorCells: {
+          rowErrors: Array.from(h.errorCells.rowErrors),
+          colErrors: Array.from(h.errorCells.colErrors),
+          blockErrors: Array.from(h.errorCells.blockErrors)
+        },
+        flashCells: Array.from(h.flashCells)
+      }))
+    };
+    localStorage.setItem('sudoku-state', JSON.stringify(stateToSave));
+  }, [level, initialBoard, board, mistakes, score, time, flashCells, errorCells, history]);
+
+  return {
+    level, setLevel,
+    initialBoard, setInitialBoard,
+    board, setBoard,
+    flashCells, setFlashCells,
+    errorCells, setErrorCells,
+    mistakes, setMistakes,
+    score, setScore,
+    time, setTime,
+    history, setHistory
+  };
 }
 
-function getCorrectCells(board) {
-  // Returns a set of [row,col] for all cells that are correct in their row, col, and block
-  let correct = new Set();
-  // Check rows
-  for (let i = 0; i < 9; i++) {
-    let seen = new Map();
-    for (let j = 0; j < 9; j++) {
-      let v = board[i][j];
-      if (v === 0) continue;
-      if (!seen.has(v)) seen.set(v, []);
-      seen.get(v).push([i, j]);
-    }
-    if (seen.size === 9 && Array.from(seen.values()).every(arr => arr.length === 1)) {
-      for (let arr of seen.values()) correct.add(arr[0].join(','));
-    }
-  }
-  // Check cols
-  for (let j = 0; j < 9; j++) {
-    let seen = new Map();
-    for (let i = 0; i < 9; i++) {
-      let v = board[i][j];
-      if (v === 0) continue;
-      if (!seen.has(v)) seen.set(v, []);
-      seen.get(v).push([i, j]);
-    }
-    if (seen.size === 9 && Array.from(seen.values()).every(arr => arr.length === 1)) {
-      for (let arr of seen.values()) correct.add(arr[0].join(','));
-    }
-  }
-  // Check blocks
-  for (let blockRow = 0; blockRow < 3; blockRow++) {
-    for (let blockCol = 0; blockCol < 3; blockCol++) {
-      let seen = new Map();
-      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
-        let r = blockRow * 3 + i, c = blockCol * 3 + j;
-        let v = board[r][c];
-        if (v === 0) continue;
-        if (!seen.has(v)) seen.set(v, []);
-        seen.get(v).push([r, c]);
-      }
-      if (seen.size === 9 && Array.from(seen.values()).every(arr => arr.length === 1)) {
-        for (let arr of seen.values()) correct.add(arr[0].join(','));
-      }
-    }
-  }
-  return correct;
-}
 
-function getErrorRegions(board) {
-  // Returns sets of cell keys for rows, cols, and blocks with errors
-  let rowErrors = new Set();
-  let colErrors = new Set();
-  let blockErrors = new Set();
 
-  // Check rows
-  for (let i = 0; i < 9; i++) {
-    let seen = new Map();
-    for (let j = 0; j < 9; j++) {
-      let v = board[i][j];
-      if (v === 0) continue;
-      if (!seen.has(v)) seen.set(v, []);
-      seen.get(v).push(j);
-    }
-    for (let [_, js] of seen.entries()) {
-      if (js.length > 1) {
-        for (let j of js) rowErrors.add(`${i},${j}`);
-      }
-    }
-  }
-  // Check columns
-  for (let j = 0; j < 9; j++) {
-    let seen = new Map();
-    for (let i = 0; i < 9; i++) {
-      let v = board[i][j];
-      if (v === 0) continue;
-      if (!seen.has(v)) seen.set(v, []);
-      seen.get(v).push(i);
-    }
-    for (let [_, is] of seen.entries()) {
-      if (is.length > 1) {
-        for (let i of is) colErrors.add(`${i},${j}`);
-      }
-    }
-  }
-  // Check blocks
-  for (let blockRow = 0; blockRow < 3; blockRow++) {
-    for (let blockCol = 0; blockCol < 3; blockCol++) {
-      let seen = new Map();
-      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
-        let r = blockRow * 3 + i, c = blockCol * 3 + j;
-        let v = board[r][c];
-        if (v === 0) continue;
-        if (!seen.has(v)) seen.set(v, []);
-        seen.get(v).push([r, c]);
-      }
-      for (let arr of seen.values()) {
-        if (arr.length > 1) {
-          for (let [r, c] of arr) blockErrors.add(`${r},${c}`);
-        }
-      }
-    }
-  }
-  return { rowErrors, colErrors, blockErrors };
-}
+
 
 function App() {
-  const [level, setLevel] = useState('easy');
-  const [initialBoard, setInitialBoard] = useState(() => generateSudokuBoard(level));
-  const [board, setBoard] = useState(initialBoard.map(row => [...row]));
+  const {
+    level, setLevel,
+    initialBoard, setInitialBoard,
+    board, setBoard,
+    flashCells, setFlashCells,
+    errorCells, setErrorCells,
+    mistakes, setMistakes,
+    score, setScore,
+    time, setTime,
+    history, setHistory
+  } = usePersistentSudokuState();
   const [message, setMessage] = useState('');
-  const [flashCells, setFlashCells] = useState(new Set());
-  const [errorCells, setErrorCells] = useState({ rowErrors: new Set(), colErrors: new Set(), blockErrors: new Set() });
   const [selectedCell, setSelectedCell] = useState(null);
+  const [timerRunning, setTimerRunning] = useState(true);
+  const timerRef = useRef(null);
   const flashTimeout = useRef(null);
+  // Save state to localStorage on relevant changes
+  useEffect(() => {
+    const stateToSave = {
+      level,
+      initialBoard,
+      board,
+      mistakes,
+      score,
+      time,
+      flashCells: Array.from(flashCells),
+      errorCells: {
+        rowErrors: Array.from(errorCells.rowErrors),
+        colErrors: Array.from(errorCells.colErrors),
+        blockErrors: Array.from(errorCells.blockErrors)
+      },
+      history: history.map(h => ({
+        ...h,
+        board: h.board,
+        errorCells: {
+          rowErrors: Array.from(h.errorCells.rowErrors),
+          colErrors: Array.from(h.errorCells.colErrors),
+          blockErrors: Array.from(h.errorCells.blockErrors)
+        },
+        flashCells: Array.from(h.flashCells)
+      }))
+    };
+    localStorage.setItem('sudoku-state', JSON.stringify(stateToSave));
+  }, [level, initialBoard, board, mistakes, score, time, flashCells, errorCells, history]);
 
-  // Helper to get error rows, cols, blocks
-  function getErrorRowsColsBlocks(errors) {
-    const errorRows = new Set();
-    const errorCols = new Set();
-    const errorBlocks = new Set();
-    errors.rowErrors.forEach(key => errorRows.add(key.split(',')[0]));
-    errors.colErrors.forEach(key => errorCols.add(key.split(',')[1]));
-    errors.blockErrors.forEach(key => {
-      const [r, c] = key.split(',').map(Number);
-      errorBlocks.add(`${Math.floor(r/3)},${Math.floor(c/3)}`);
-    });
-    return { errorRows, errorCols, errorBlocks };
+  // Timer effect
+  // Start/stop timer based on timerRunning
+  useEffect(() => {
+    if (timerRunning) {
+      timerRef.current = setInterval(() => {
+        setTime(t => t + 1);
+      }, 1000);
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [timerRunning]);
+
+
+
+  // Format time as mm:ss
+  function formatTime(secs) {
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
   }
+
+  // Helper to check if a row has an error (for row highlighting)
+
 
   // Update handleChange to only be used by button input
   const handleInput = (num) => {
     if (!selectedCell) return;
+    // If timer is paused, resume it on any input
+    if (!timerRunning) setTimerRunning(true);
     const [rowIdx, colIdx] = selectedCell;
     if (initialBoard[rowIdx][colIdx] !== 0) return;
     const newBoard = board.map(r => [...r]);
+    const prevValue = newBoard[rowIdx][colIdx];
+    // Only push to history if the value is actually changing
+    if (prevValue !== num) {
+      setHistory(h => [...h, {
+        board: board.map(r => [...r]),
+        mistakes,
+        score,
+        errorCells: {
+          rowErrors: new Set(errorCells.rowErrors),
+          colErrors: new Set(errorCells.colErrors),
+          blockErrors: new Set(errorCells.blockErrors)
+        },
+        flashCells: new Set(flashCells),
+        selectedCell,
+        message
+      }]);
+    }
     newBoard[rowIdx][colIdx] = num;
     setBoard(newBoard);
     // Error highlighting
     const errors = getErrorRegions(newBoard);
     setErrorCells(errors);
+    // Mistake logic: if user enters a nonzero value and it causes an error, increment mistakes
     if (
-      errors.rowErrors.size > 0 ||
-      errors.colErrors.size > 0 ||
-      errors.blockErrors.size > 0
+      num !== 0 &&
+      (errors.rowErrors.has(`${rowIdx},${colIdx}`) ||
+        errors.colErrors.has(`${rowIdx},${colIdx}`) ||
+        errors.blockErrors.has(`${rowIdx},${colIdx}`))
     ) {
       setMessage('There is a mistake!');
+      // Only increment if this is a new mistake (not just re-entering the same wrong value)
+      if (prevValue !== num) setMistakes(m => m + 1);
     } else {
       setMessage('');
+      // Score logic: if user enters a correct value (no error and not zero), increment score
+      if (num !== 0 && prevValue !== num) setScore(s => s + 1);
     }
     // Flash correct cells if any row, col, or block is correct
     const correct = getCorrectCells(newBoard);
@@ -217,81 +222,134 @@ function App() {
     }
   };
 
-  const { errorRows, errorCols, errorBlocks } = getErrorRowsColsBlocks(errorCells);
+  // Undo handler
+  const handleUndo = () => {
+    setHistory(h => {
+      if (h.length === 0) return h;
+      const last = h[h.length - 1];
+      setBoard(last.board.map(r => [...r]));
+      setMistakes(last.mistakes);
+      setScore(last.score);
+      setErrorCells({
+        rowErrors: new Set(last.errorCells.rowErrors),
+        colErrors: new Set(last.errorCells.colErrors),
+        blockErrors: new Set(last.errorCells.blockErrors)
+      });
+      setFlashCells(new Set(last.flashCells));
+      setSelectedCell(last.selectedCell);
+      setMessage(last.message);
+      return h.slice(0, -1);
+    });
+  };
 
-  // Helper to check if a row has an error (for row highlighting)
-  function isRowInError(rowIdx) {
-    for (let colIdx = 0; colIdx < 9; colIdx++) {
-      if (errorCells.rowErrors.has(`${rowIdx},${colIdx}`)) return true;
-    }
-    return false;
-  }
+
 
   return (
     <div className="sudoku-container">
-      <h1>Sudoku Game</h1>
-      <div style={{ marginBottom: '1rem' }}>
-        <label htmlFor="level-select">Level: </label>
-        <select id="level-select" value={level} onChange={e => {
-          const newLevel = e.target.value;
-          setLevel(newLevel);
-          const newInitial = generateSudokuBoard(newLevel);
-          setInitialBoard(newInitial);
-          setBoard(newInitial.map(row => [...row]));
-          setMessage('');
-          setFlashCells(new Set());
-          setErrorCells({ rowErrors: new Set(), colErrors: new Set(), blockErrors: new Set() });
-          setSelectedCell(null);
-        }}>
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
-        </select>
+      {/* Top Bar */}
+      <div className="top-bar">
+        <div className="difficulty">
+          Difficulty:
+          {["easy", "medium", "hard", "expert", "master", "extreme"].map(lvl => (
+            <button
+              key={lvl}
+              className={level === lvl ? "difficulty-btn active" : "difficulty-btn"}
+              onClick={() => {
+                setLevel(lvl);
+                const newInitial = generateSudokuBoard(lvl);
+                setInitialBoard(newInitial);
+                setBoard(newInitial.map(row => [...row]));
+                setMessage("");
+                setFlashCells(new Set());
+                setErrorCells({ rowErrors: new Set(), colErrors: new Set(), blockErrors: new Set() });
+                setSelectedCell(null);
+              }}
+            >
+              {lvl.charAt(0).toUpperCase() + lvl.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="stats">
+          <span>Score <b>{score}</b></span>
+          <span>Mistakes <b>{mistakes}/3</b></span>
+          <span>
+            Time <b>{formatTime(time)}</b>{' '}
+            <button
+              style={{ border: 'none', background: 'none', color: '#4a5568', fontSize: '1.1rem', cursor: 'pointer' }}
+              onClick={() => setTimerRunning(r => !r)}
+              aria-label={timerRunning ? 'Pause timer' : 'Resume timer'}
+            >
+              {timerRunning ? '⏸' : '▶️'}
+            </button>
+          </span>
+        </div>
       </div>
-      <div className="sudoku-board" style={{
-        display: 'grid',
-        gridTemplateRows: `repeat(${board.length}, 1fr)`
-      }}>
-        {board.map((row, rowIdx) => (
-          <div
-            className="sudoku-row"
-            key={rowIdx}
-            style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${row.length}, 1fr)`
-            }}
-          >
-            {row.map((cell, colIdx) => {
-              const key = `${rowIdx},${colIdx}`;
-              const isErrorCell = errorCells.rowErrors.has(key) || errorCells.colErrors.has(key) || errorCells.blockErrors.has(key);
-              const isErrorCol = errorCols.has(String(colIdx));
-              const isErrorBlock = errorBlocks.has(`${Math.floor(rowIdx/3)},${Math.floor(colIdx/3)}`);
-              const isErrorRow = isRowInError(rowIdx);
-              const isFlashing = flashCells.has(key);
-              const isSelected = selectedCell && selectedCell[0] === rowIdx && selectedCell[1] === colIdx;
-              return (
-                <input
-                  key={colIdx}
-                  className={`sudoku-cell${isErrorCell ? ' error' : ''}${isErrorCol ? ' error-col' : ''}${isErrorBlock ? ' error-block' : ''}${isErrorRow ? ' error-row' : ''}${isFlashing ? ' flash' : ''}${isSelected ? ' selected' : ''}`}
-                  type="text"
-                  maxLength={1}
-                  value={cell === 0 ? '' : cell}
-                  readOnly
-                  onClick={() => setSelectedCell([rowIdx, colIdx])}
-                  disabled={initialBoard[rowIdx][colIdx] !== 0}
-                />
-              );
-            })}
+      {/* Board and Numpad Area */}
+      <div className="board-area">
+        {/* Sudoku Board */}
+        <div className="sudoku-board">
+          {board.map((row, rowIdx) => (
+            <div className="sudoku-row" key={rowIdx}>
+              {row.map((cell, colIdx) => {
+                const key = `${rowIdx},${colIdx}`;
+                const isErrorCell = errorCells.rowErrors.has(key) || errorCells.colErrors.has(key) || errorCells.blockErrors.has(key);
+                // Removed unused variables: isErrorCol, isErrorBlock, isErrorRow
+                const isFlashing = flashCells.has(key);
+                const isSelected = selectedCell && selectedCell[0] === rowIdx && selectedCell[1] === colIdx;
+                let cellClass = "sudoku-cell";
+                if (initialBoard[rowIdx][colIdx] !== 0) cellClass += " prefill";
+                if (isSelected) cellClass += " selected";
+                else if (isFlashing) cellClass += " flash";
+                if (isErrorCell) cellClass += " error";
+                return (
+                  <div key={colIdx} style={{ position: 'relative', width: '100%', height: '100%' }}>
+                    <input
+                      className={cellClass}
+                      type="text"
+                      maxLength={1}
+                      value={cell === 0 ? '' : cell}
+                      readOnly
+                      onClick={() => setSelectedCell([rowIdx, colIdx])}
+                      disabled={initialBoard[rowIdx][colIdx] !== 0}
+                      inputMode="none"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+        {/* Numpad Area */}
+        <div className="numpad-area">
+          <div className="numpad">
+            {[1,2,3,4,5,6,7,8,9].map(num => (
+              <button
+                key={num}
+                className="numpad-btn"
+                onClick={() => handleInput(num)}
+              >
+                {num}
+              </button>
+            ))}
           </div>
-        ))}
+          <div className="action-btn-row">
+            <button className="clear-btn" onClick={() => handleInput(0)}>Clear</button>
+            <button className="undo-btn" onClick={handleUndo} disabled={history.length === 0}>Undo</button>
+            <button className="newgame-btn" onClick={() => {
+              const newInitial = generateSudokuBoard(level);
+              setInitialBoard(newInitial);
+              setBoard(newInitial.map(row => [...row]));
+              setMessage('');
+              setFlashCells(new Set());
+              setErrorCells({ rowErrors: new Set(), colErrors: new Set(), blockErrors: new Set() });
+              setSelectedCell(null);
+              setHistory([]);
+              setTime(0);
+              setTimerRunning(true);
+            }}>New Game</button>
+          </div>
+        </div>
       </div>
-      <div className="numpad">
-        {[1,2,3,4,5,6,7,8,9].map(num => (
-          <button key={num} className="numpad-btn" onClick={() => handleInput(num)}>{num}</button>
-        ))}
-      </div>
-      <button onClick={() => handleInput(0)}>Clear</button>
-
       <div className="message">{message}</div>
     </div>
   );

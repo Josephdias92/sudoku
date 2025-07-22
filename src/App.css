@@ -1,3 +1,39 @@
+.action-btn-row {
+  display: flex;
+  flex-direction: row;
+  gap: 0.7rem;
+  width: 100%;
+  margin-top: 0.7rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .action-btn-row {
+    gap: 0.3rem;
+    flex-direction: column;
+    align-items: stretch;
+    margin-top: 0.5rem;
+  }
+}
+.undo-btn {
+  font-size: 1.1rem;
+  padding: 0.7rem 0;
+  border-radius: 8px;
+  border: none;
+  background: #fffbe7;
+  color: #b48a00;
+  font-weight: 600;
+  width: 100%;
+  margin: 0.5rem 0 0 0;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(180,138,0,0.04);
+  transition: background 0.2s, color 0.2s;
+}
+.undo-btn:disabled {
+  background: #f2f2f2;
+  color: #bbb;
+  cursor: not-allowed;
+}
 #root {
   display: flex;
   flex-direction: column;
@@ -5,12 +41,102 @@
   justify-content: center;
   min-height: 100vh;
   padding: 0 1rem;
+
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
-  font-weight: 400;
-  max-width: 1280px;
+}
+
+/* Top bar and difficulty styles */
+.top-bar {
+  width: 100%;
+  max-width: 900px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 2vw 0.5rem 2vw;
+  font-size: 1.1rem;
+  color: #4a5568;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.difficulty {
+  display: flex;
+  gap: 0.7em;
+  font-weight: 500;
+  font-size: 1.1rem;
+  align-items: center;
+}
+.difficulty-btn {
+  background: none;
+  border: none;
+  color: #4a5568;
+  font-weight: 500;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-bottom 0.2s;
+}
+.difficulty-btn.active {
+  color: #2b4fa2;
+  border-bottom: 2px solid #2b4fa2;
+}
+.stats {
+  display: flex;
+  gap: 1.5em;
+  align-items: center;
+  font-size: 1.1rem;
+  color: #222;
+}
+.board-area {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 900px;
   margin: 0 auto;
-  box-sizing: border-box;
+  gap: 2vw;
+  flex-wrap: wrap;
+}
+.numpad-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+  margin-top: 1.5rem;
+  min-width: 180px;
+  width: min(90vw, 260px);
+}
+.clear-btn {
+  font-size: 1.1rem;
+  padding: 0.7rem 0;
+  border-radius: 8px;
+  border: none;
+  background: #eaf1ff;
+  color: #2b4fa2;
+  font-weight: 600;
+  width: 100%;
+  margin: 0.5rem 0 0 0;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: background 0.2s, color 0.2s;
+}
+.newgame-btn {
+  font-size: 1.2rem;
+  font-weight: 700;
+  padding: 0.7rem 0;
+  border-radius: 8px;
+  border: none;
+  background: #2b4fa2;
+  color: #fff;
+  width: 100%;
+  margin-top: 1.2rem;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: background 0.2s, color 0.2s;
 }
 
 .logo {
@@ -41,13 +167,6 @@
   }
 }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
 
 .sudoku-container {
   display: flex;
@@ -57,16 +176,13 @@
   padding: 0;
 }
 
+
 .sudoku-container > h1 {
   margin-bottom: 0.5rem;
 }
 
 .sudoku-container > div[style*="marginBottom"] {
   margin-bottom: 1.2rem !important;
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  font-size: 1.1rem;
 }
 
 #level-select {
@@ -76,9 +192,6 @@
   border: 1.5px solid #646cff;
   background: #fff;
   color: #213547;
-  outline: none;
-  transition: border 0.2s;
-  font-weight: 500;
 }
 #level-select:focus {
   border: 2px solid #646cff;
